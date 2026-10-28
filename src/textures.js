@@ -744,7 +744,9 @@ export class TextureBank {
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.generateMipmaps = true;
-    tex.colorSpace = THREE.SRGBColorSpace;
+    // Raw values: the chunk shader lights the texels as display colors and writes them
+    // straight out, so the GPU must not sRGB-decode them (that darkened everything).
+    tex.colorSpace = THREE.NoColorSpace;
     tex.needsUpdate = true;
     return tex;
   }

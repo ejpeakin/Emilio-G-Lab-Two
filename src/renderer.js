@@ -33,6 +33,7 @@ const FRAG = /* glsl */ `
   precision highp sampler2DArray;
   uniform sampler2DArray uAtlas;
   uniform float uDaylight;
+  uniform float uBrightness;
   uniform vec3 uFogColor;
   uniform float uFogNear;
   uniform float uFogFar;
@@ -56,7 +57,9 @@ const FRAG = /* glsl */ `
     float s = curve(L.x) * uDaylight;
     float b = curve(L.y);
     vec3 light = max(vec3(s), vec3(b, b * 0.9, b * 0.74));
-    light = max(light, vec3(0.035));
+    light = max(light, vec3(0.05));
+    // Brightness setting: lift the dark end of the curve, like Minecraft's slider.
+    light = mix(light, sqrt(light), uBrightness * 0.6);
     float shade = vLight.z;
     if (abs(layer - uFireLayer) < 0.5) { light = vec3(1.0); shade = 0.9 + 0.1 * sin(uTime * 17.0 + vTex.x * 9.0); }
     vec3 col = c.rgb * light * shade * uTint;
@@ -74,6 +77,7 @@ export class ChunkRenderer {
     this.shared = {
       uAtlas: { value: bank.atlas },
       uDaylight: { value: 1 },
+      uBrightness: { value: 0.5 },
       uFogColor: { value: new THREE.Vector3(0.6, 0.75, 1) },
       uFogNear: { value: 60 },
       uFogFar: { value: 90 },

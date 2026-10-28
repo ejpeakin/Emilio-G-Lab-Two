@@ -55,7 +55,7 @@ export class Sky {
       ctx.fillRect(17, 17, 3, 2);
       ctx.fillRect(18, 11, 2, 2);
     });
-    const bodyMat = (map) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false });
+    const bodyMat = (map) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     this.sun = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), bodyMat(sunTex));
     this.moon = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), bodyMat(moonTex));
     this.sun.renderOrder = -9;
@@ -72,7 +72,7 @@ export class Sky {
     }
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-    this.starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, depthWrite: false, depthTest: false, fog: false });
+    this.starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, depthWrite: false, fog: false });
     this.stars = new THREE.Points(sg, this.starMat);
     this.stars.renderOrder = -9;
     this.group.add(this.stars);
@@ -117,7 +117,7 @@ export class Sky {
     const a = (time / DAY_TICKS) * Math.PI * 2;
     const e = Math.sin(a);
     const d = smoothstep(-0.2, 0.25, e);
-    this.daylight = lerp(0.16, 1, d);
+    this.daylight = lerp(0.2, 1, d);
     this.skyDarken = Math.round((1 - d) * 11);
     const top = mixc([0.012, 0.014, 0.05], [0.42, 0.62, 1.0], d);
     let horizon = mixc([0.03, 0.04, 0.09], [0.74, 0.85, 1.0], d);

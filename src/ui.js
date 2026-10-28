@@ -225,6 +225,7 @@ export class UI {
       ['s-rd', 'o-rd', 'renderDistance', (v) => `${v} chunks`],
       ['s-fov', 'o-fov', 'fov', (v) => `${v}°`],
       ['s-sens', 'o-sens', 'sensitivity', (v) => `${Math.round(v * 100)}%`],
+      ['s-bright', 'o-bright', 'brightness', (v) => (v <= 0.05 ? 'Moody' : v >= 0.95 ? 'Bright' : `${Math.round(v * 100)}%`)],
       ['s-vol', 'o-vol', 'volume', (v) => `${Math.round(v * 100)}%`],
       ['s-mus', 'o-mus', 'music', (v) => `${Math.round(v * 100)}%`],
     ];

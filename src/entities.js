@@ -9,11 +9,15 @@ import { HEIGHT } from './worldgen.js';
 import { mulberry32 } from './noise.js';
 
 const lightCurve = (l) => Math.pow(0.8, 15 - l);
+let brightnessSetting = 0.5;
+export function setEntityBrightness(b) {
+  brightnessSetting = b;
+}
 
 function brightness(world, sky, x, y, z) {
   const { sky: s, block: b } = world.getLight(Math.floor(x), Math.floor(y), Math.floor(z));
-  const v = Math.max(lightCurve(s) * sky.daylight, lightCurve(b));
-  return Math.max(0.06, v);
+  const v = Math.max(lightCurve(s) * sky.daylight, lightCurve(b), 0.05);
+  return v + (Math.sqrt(v) - v) * brightnessSetting * 0.6;
 }
 
 // --- Base entity -------------------------------------------------------------------

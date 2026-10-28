@@ -8,7 +8,7 @@ import { CHUNK, SEA } from './worldgen.js';
 import { ChunkRenderer, SelectionBox, CrackOverlay, Particles } from './renderer.js';
 import { Sky } from './sky.js';
 import { Player } from './player.js';
-import { EntityManager, FallingBlock } from './entities.js';
+import { EntityManager, FallingBlock, setEntityBrightness } from './entities.js';
 import { ViewModel } from './viewmodel.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
@@ -22,7 +22,7 @@ const INDEX_KEY = 'blockcraft.worlds';
 const WORLD_KEY = (id) => `blockcraft.world.${id}`;
 
 const DEFAULT_SETTINGS = {
-  renderDistance: 6, fov: 70, sensitivity: 1, volume: 0.7, music: 0.4,
+  renderDistance: 6, fov: 70, sensitivity: 1, brightness: 0.5, volume: 0.7, music: 0.4,
   invertY: false, clouds: true, bobbing: true, peaceful: false, keepInventory: false,
 };
 
@@ -143,6 +143,8 @@ export class Game {
     storageSet(SETTINGS_KEY, JSON.stringify(this.settings));
     this.audio.setVolume(this.settings.volume);
     this.audio.setMusicVolume(this.settings.music);
+    this.chunkRenderer.shared.uBrightness.value = this.settings.brightness;
+    setEntityBrightness(this.settings.brightness);
   }
 
   resize() {
@@ -168,6 +170,7 @@ export class Game {
     if (!meta) return;
     this.audio.resume();
     const save = this.saves.load(id);
+    this.cancelSleep();
     this.worldId = id;
     this.worldName = meta.name;
     this.state = 'loading';
@@ -267,7 +270,16 @@ export class Game {
     if (!ok) this.ui.toast('Could not save: browser storage is full or blocked.');
   }
 
+  // Clears a sleep fade in progress so the screen can't stay black.
+  cancelSleep() {
+    clearTimeout(this.sleepTimer);
+    this.sleepTimer = null;
+    this.sleeping = false;
+    document.getElementById('sleep-fade').style.opacity = 0;
+  }
+
   quitToTitle() {
+    this.cancelSleep();
     this.save();
     this.ui.close();
     this.entities.clear();
@@ -341,8 +353,9 @@ export class Game {
     fade.style.opacity = 1;
     this.sleeping = true;
     this.audio.sleep();
-    setTimeout(() => {
-      if (!this.world) return;
+    this.sleepTimer = setTimeout(() => {
+      this.sleepTimer = null;
+      if (this.world !== world) return;
       world.time = 0;
       world.day += 1;
       world.setBlock(x, y, z, 0);
@@ -487,7 +500,7 @@ export class Game {
     const curve = (l) => Math.pow(0.8, 15 - l);
     this.viewModel.update(dt, p, {
       sky: head.sky / 15, block: head.block / 15,
-      brightness: Math.max(curve(head.sky) * this.sky.daylight, curve(head.block), 0.08),
+      brightness: Math.max(curve(head.sky) * this.sky.daylight, curve(head.block), 0.08) * (1 + this.settings.brightness * 0.4),
     });
     this.ui.updateHud(dt);
     if (this.ui.screen === 'map' && Math.floor(world.clock * 2) !== Math.floor((world.clock - dt) * 2)) this.ui.drawMap();
