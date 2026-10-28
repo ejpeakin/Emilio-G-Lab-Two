@@ -2,16 +2,17 @@ import { Game } from './game.js';
 
 // Entry point. The game is exposed on window for poking at from the console,
 // e.g. game.player.inventory.add({ id: 'diamond', count: 64 }) or game.world.time = 13000.
-function hasWebGL2() {
+function hasWebGL() {
   try {
-    return !!document.createElement('canvas').getContext('webgl2');
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
   } catch {
     return false;
   }
 }
 
-if (!hasWebGL2()) {
-  window.showBootError?.('Your browser has 3D graphics (WebGL 2) turned off or unsupported. Try Chrome, Edge or Firefox with hardware acceleration enabled.');
+if (!hasWebGL()) {
+  window.showBootError?.('Your browser has 3D graphics (WebGL) turned off or unsupported. Turn on hardware acceleration in your browser settings, or try Chrome, Edge or Firefox.');
 } else {
   try {
     window.game = new Game();

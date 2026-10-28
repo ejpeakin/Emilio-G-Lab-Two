@@ -695,7 +695,9 @@ function tileCanvas(tile) {
 }
 
 export class TextureBank {
-  constructor() {
+  // safe: build a plain 2D atlas (works on WebGL 1) instead of a texture array.
+  constructor(safe = false) {
+    this.safe = safe;
     this.tiles = new Map();
     this.layers = new Map();
     this.avg = [];
@@ -710,6 +712,7 @@ export class TextureBank {
     this.atlas = this.buildAtlas();
     this.tileCanvases = new Map();
     for (const [name, tile] of this.tiles) this.tileCanvases.set(name, tileCanvas(tile));
+    if (safe) this.atlas = this.buildAtlas2D();
     this.itemTiles = new Map();
     for (const [name, gen] of Object.entries(ITEM_GEN)) this.itemTiles.set(name, tileCanvas(paint(gen, name)));
     this.icons = new Map();
@@ -748,6 +751,29 @@ export class TextureBank {
     // straight out, so the GPU must not sRGB-decode them (that darkened everything).
     tex.colorSpace = THREE.NoColorSpace;
     tex.needsUpdate = true;
+    return tex;
+  }
+
+  // Tiles laid out 16 per row on one canvas; the safe shader picks a tile by layer index.
+  buildAtlas2D() {
+    const cols = 16;
+    let rows = 1;
+    while (rows * cols < this.tiles.size) rows *= 2;
+    const c = document.createElement('canvas');
+    c.width = cols * S;
+    c.height = rows * S;
+    const ctx = c.getContext('2d');
+    let i = 0;
+    for (const tile of this.tiles.values()) {
+      ctx.putImageData(new ImageData(tile.d, S, S), (i % cols) * S, Math.floor(i / cols) * S);
+      i++;
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.NoColorSpace;
+    this.atlasGrid = [cols, rows];
     return tex;
   }
 

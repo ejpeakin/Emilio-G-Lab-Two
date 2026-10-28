@@ -178,6 +178,7 @@ export class UI {
       t ? `Looking at: ${t.block.label} (${t.x}, ${t.y}, ${t.z})` : '',
       `Seed: ${world.seed}`,
       `GPU: ${g.gpu}`,
+      `Graphics: ${g.safe ? 'Safe (WebGL 1)' : 'Standard (WebGL 2)'}`,
       `Drawn: ${g.renderer.info.render.calls} calls, ${g.renderer.info.render.triangles} triangles`,
     ].join('\n');
   }
@@ -239,7 +240,7 @@ export class UI {
       });
     }
     this.rangeFormat = ranges;
-    const checks = [['s-invert', 'invertY'], ['s-clouds', 'clouds'], ['s-bob', 'bobbing'], ['s-peaceful', 'peaceful'], ['s-keep', 'keepInventory']];
+    const checks = [['s-safe', 'safeGraphics'], ['s-invert', 'invertY'], ['s-clouds', 'clouds'], ['s-bob', 'bobbing'], ['s-peaceful', 'peaceful'], ['s-keep', 'keepInventory']];
     for (const [id, key] of checks) {
       $(id).addEventListener('change', () => {
         s[key] = $(id).checked;

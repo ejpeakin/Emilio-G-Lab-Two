@@ -25,7 +25,7 @@ const WORLD_KEY = (id) => `blockcraft.world.${id}`;
 const LOW_MEMORY = (navigator.deviceMemory ?? 8) <= 4;
 
 const DEFAULT_SETTINGS = {
-  renderDistance: LOW_MEMORY ? 4 : 6, fov: 70, sensitivity: 1, brightness: 0.5, volume: 0.7, music: 0.4,
+  renderDistance: LOW_MEMORY ? 4 : 6, safeGraphics: false, fov: 70, sensitivity: 1, brightness: 0.5, volume: 0.7, music: 0.4,
   invertY: false, clouds: true, bobbing: true, peaceful: false, keepInventory: false,
 };
 
@@ -89,10 +89,30 @@ class Saves {
   }
 }
 
+function hasWebGL2() {
+  try {
+    return !!document.createElement('canvas').getContext('webgl2');
+  } catch {
+    return false;
+  }
+}
+
 export class Game {
   constructor() {
     this.canvas = document.getElementById('game');
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, powerPreference: 'high-performance' });
+    this.settings = this.loadSettings();
+    // Safe graphics: WebGL 1 and a plain texture atlas, for devices where the normal
+    // renderer shows a black picture. On from the settings, from #safe in the address,
+    // or when WebGL 2 is missing.
+    if (location.hash === '#safe') this.settings.safeGraphics = true;
+    this.safe = !!this.settings.safeGraphics || !hasWebGL2();
+    this.safeSetting = !!this.settings.safeGraphics;
+    const options = { canvas: this.canvas, antialias: false, powerPreference: this.safe ? 'default' : 'high-performance' };
+    if (this.safe) {
+      const context = this.canvas.getContext('webgl', { antialias: false, alpha: false, depth: true, stencil: false, powerPreference: 'default' });
+      if (context) options.context = context;
+    }
+    this.renderer = new THREE.WebGLRenderer(options);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_MEMORY ? 1 : 1.5));
     this.renderer.autoClear = true;
     this.renderer.info.autoReset = false;
@@ -100,8 +120,7 @@ export class Game {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.08, 1200);
     this.camera.rotation.order = 'YXZ';
-    this.settings = this.loadSettings();
-    this.bank = new TextureBank();
+    this.bank = new TextureBank(this.safe);
     this.chunkRenderer = new ChunkRenderer(this.scene, this.bank);
     this.sky = new Sky(this.scene);
     this.selection = new SelectionBox(this.scene);
@@ -145,7 +164,15 @@ export class Game {
   }
 
   applySettings() {
-    storageSet(SETTINGS_KEY, JSON.stringify(this.settings));
+    const stored = storageSet(SETTINGS_KEY, JSON.stringify(this.settings));
+    if (!!this.settings.safeGraphics !== this.safeSetting && this.chunkRenderer) {
+      // The graphics mode is chosen at startup, so switching it needs a reload.
+      this.safeSetting = !!this.settings.safeGraphics;
+      this.save();
+      if (!stored || location.hash === '#safe') location.hash = this.settings.safeGraphics ? 'safe' : '';
+      location.reload();
+      return;
+    }
     this.audio.setVolume(this.settings.volume);
     this.audio.setMusicVolume(this.settings.music);
     this.chunkRenderer.shared.uBrightness.value = this.settings.brightness;
@@ -463,7 +490,16 @@ export class Game {
 
   reportProblem(text) {
     if (this.input) this.input.unlock();
-    window.showBootError?.(`${text}\n\nGraphics: ${this.gpu}. Click to dismiss.`);
+    if (!this.safe) {
+      // First line of defence: retry in safe graphics mode.
+      window.showBootError?.(`${text}\n\nSwitching to Safe graphics and reloading…`);
+      this.save();
+      this.settings.safeGraphics = true;
+      if (!storageSet(SETTINGS_KEY, JSON.stringify(this.settings))) location.hash = 'safe';
+      setTimeout(() => location.reload(), 2500);
+      return;
+    }
+    window.showBootError?.(`${text}\n\nSafe graphics is already on. Graphics: ${this.gpu}. Click to dismiss.`);
   }
 
   hideProblem() {

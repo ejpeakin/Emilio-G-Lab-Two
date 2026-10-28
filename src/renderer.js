@@ -30,8 +30,21 @@ const VERT = /* glsl */ `
 
 const FRAG = /* glsl */ `
   precision highp float;
+#ifdef SAFE
+  // Safe graphics: one 2D atlas, 16 tiles per row (WebGL 1 compatible, no mipmaps).
+  uniform sampler2D uAtlas;
+  uniform vec2 uAtlasGrid;
+  vec4 tile(vec2 uv, float layer) {
+    vec2 f = clamp(uv - floor(uv), 0.5 / 16.0, 15.5 / 16.0);
+    float col = mod(layer, uAtlasGrid.x);
+    float row = floor(layer / uAtlasGrid.x + 0.001);
+    return texture2D(uAtlas, vec2((col + f.x) / uAtlasGrid.x, 1.0 - (row + 1.0 - f.y) / uAtlasGrid.y));
+  }
+#else
   precision highp sampler2DArray;
   uniform sampler2DArray uAtlas;
+  vec4 tile(vec2 uv, float layer) { return texture(uAtlas, vec3(uv, layer)); }
+#endif
   uniform float uDaylight;
   uniform float uBrightness;
   uniform vec3 uFogColor;
@@ -51,7 +64,7 @@ const FRAG = /* glsl */ `
   float curve(float l) { return pow(0.8, 15.0 * (1.0 - l)); }
   void main() {
     float layer = floor(vTex.z + 0.5);
-    vec4 c = texture(uAtlas, vec3(vTex.xy, layer));
+    vec4 c = tile(vTex.xy, layer);
     if (c.a < uAlphaTest) discard;
     vec2 L = mix(vLight.xy, uEntityLight, uEntity);
     float s = curve(L.x) * uDaylight;
@@ -76,6 +89,7 @@ export class ChunkRenderer {
     setFireLayer(bank.fireLayer);
     this.shared = {
       uAtlas: { value: bank.atlas },
+      uAtlasGrid: { value: new THREE.Vector2(...(bank.atlasGrid ?? [16, 16])) },
       uDaylight: { value: 1 },
       uBrightness: { value: 0.5 },
       uFogColor: { value: new THREE.Vector3(0.6, 0.75, 1) },
@@ -98,6 +112,7 @@ export class ChunkRenderer {
     return new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
+      defines: this.bank.safe ? { SAFE: '' } : {},
       uniforms: {
         ...this.shared,
         uAlphaTest: { value: alphaTest },
