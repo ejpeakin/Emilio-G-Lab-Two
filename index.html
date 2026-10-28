@@ -195,6 +195,9 @@
       box.querySelector('p').textContent = text;
       box.hidden = false;
     };
+    document.getElementById('boot-error').addEventListener('click', function () {
+      if (window.game) this.hidden = true;
+    });
     window.addEventListener('error', function (e) {
       // Only scripts and script errors; a missing font stylesheet is harmless.
       if (e.target && e.target.tagName && e.target.tagName !== 'SCRIPT') return;

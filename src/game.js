@@ -21,8 +21,11 @@ const SETTINGS_KEY = 'blockcraft.settings';
 const INDEX_KEY = 'blockcraft.worlds';
 const WORLD_KEY = (id) => `blockcraft.world.${id}`;
 
+// Devices that report 4 GB or less (most school Chromebooks) start with a lighter load.
+const LOW_MEMORY = (navigator.deviceMemory ?? 8) <= 4;
+
 const DEFAULT_SETTINGS = {
-  renderDistance: 6, fov: 70, sensitivity: 1, brightness: 0.5, volume: 0.7, music: 0.4,
+  renderDistance: LOW_MEMORY ? 4 : 6, fov: 70, sensitivity: 1, brightness: 0.5, volume: 0.7, music: 0.4,
   invertY: false, clouds: true, bobbing: true, peaceful: false, keepInventory: false,
 };
 
@@ -90,8 +93,10 @@ export class Game {
   constructor() {
     this.canvas = document.getElementById('game');
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_MEMORY ? 1 : 1.5));
     this.renderer.autoClear = true;
+    this.renderer.info.autoReset = false;
+    this.watchGraphics();
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.08, 1200);
     this.camera.rotation.order = 'YXZ';
@@ -418,14 +423,74 @@ export class Game {
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
     this.fps += (1 / Math.max(dt, 1e-3) - this.fps) * 0.05;
-    if (this.world && this.state !== 'loading') {
-      this.update(dt);
-      this.render();
-    } else if (!this.world) {
-      this.renderer.setClearColor(0x000000);
-      this.renderer.clear();
+    try {
+      if (this.world && this.state !== 'loading') {
+        this.update(dt);
+        this.render();
+        this.checkBlackFrame(now);
+      } else if (!this.world) {
+        this.renderer.setClearColor(0x000000);
+        this.renderer.clear();
+      }
+    } catch (e) {
+      console.error(e);
+      if (!this.reportedError) {
+        this.reportedError = true;
+        this.reportProblem(`Something went wrong while drawing the game: ${e.message}`);
+      }
     }
     this.input.endFrame();
+  }
+
+  // --- Graphics diagnostics -------------------------------------------------------------
+  // A black screen with the HUD still showing means the 3D view failed on this device;
+  // these turn the usual causes into a message on screen.
+
+  watchGraphics() {
+    const gl = this.renderer.getContext();
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    this.gpu = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    this.canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.reportProblem('The graphics card stopped drawing the game, usually because it ran out of memory. Open Options, lower Render distance, then reload the page.');
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => this.hideProblem());
+    this.renderer.debug.onShaderError = (g, program, vs, fs) => {
+      const log = [g.getProgramInfoLog(program), g.getShaderInfoLog(vs), g.getShaderInfoLog(fs)].filter(Boolean).join(' ').trim();
+      this.reportProblem(`A graphics shader would not compile on this device: ${log.slice(0, 300) || 'no details'}`);
+    };
+  }
+
+  reportProblem(text) {
+    if (this.input) this.input.unlock();
+    window.showBootError?.(`${text}\n\nGraphics: ${this.gpu}. Click to dismiss.`);
+  }
+
+  hideProblem() {
+    const box = document.getElementById('boot-error');
+    if (box) box.hidden = true;
+  }
+
+  // Every two seconds in daylight under open sky, sample the top of the picture: it
+  // should be sky. Three black samples in a row means nothing is reaching the screen.
+  checkBlackFrame(now) {
+    if (this.blackReported || now - (this.lastBlackCheck ?? 0) < 2000 || this.state !== 'playing') return;
+    this.lastBlackCheck = now;
+    const p = this.player;
+    const head = this.world.getLight(Math.floor(p.x), Math.floor(p.y + p.eyeHeight), Math.floor(p.z));
+    if (this.sky.daylight < 0.8 || head.sky < 15 || p.pitch < -0.2 || p.headInWater || p.headInLava) {
+      this.blackCount = 0;
+      return;
+    }
+    const gl = this.renderer.getContext();
+    const px = new Uint8Array(4);
+    gl.readPixels(Math.floor(gl.drawingBufferWidth / 2), Math.floor(gl.drawingBufferHeight * 0.95), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    this.blackCount = px[0] + px[1] + px[2] < 6 ? (this.blackCount ?? 0) + 1 : 0;
+    if (this.blackCount >= 3) {
+      this.blackReported = true;
+      const r = this.renderer.info.render;
+      this.reportProblem(`The game is running, but the 3D picture is coming out black on this device (${r.calls} draw calls, ${r.triangles} triangles). Make sure hardware acceleration is on in your browser settings, or try another browser.`);
+    }
   }
 
   manageChunks() {
@@ -607,6 +672,7 @@ export class Game {
   }
 
   render() {
+    this.renderer.info.reset();
     this.renderer.render(this.scene, this.camera);
     if (!this.hudHidden && !this.player.dead) this.viewModel.render(this.renderer, this.camera.aspect);
   }

@@ -177,6 +177,8 @@ export class UI {
       `Entities: ${g.entities.list.length}`,
       t ? `Looking at: ${t.block.label} (${t.x}, ${t.y}, ${t.z})` : '',
       `Seed: ${world.seed}`,
+      `GPU: ${g.gpu}`,
+      `Drawn: ${g.renderer.info.render.calls} calls, ${g.renderer.info.render.triangles} triangles`,
     ].join('\n');
   }
 
