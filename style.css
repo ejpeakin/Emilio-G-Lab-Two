@@ -192,6 +192,8 @@ button, input, select { font: inherit; }
 .progress span { display: block; height: 100%; width: 0; background: #80ff20; transition: width 0.1s; }
 #death-cause { margin: 0; text-shadow: 2px 2px 0 #000; }
 .center-msg { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.35); cursor: pointer; }
+.boot-error { z-index: 50; background: rgba(0, 0, 0, 0.85); cursor: default; padding: 16px; }
+.boot-error p { max-width: 520px; margin: 0; padding: 12px 18px; background: #3a1010; border: 2px solid #000; box-shadow: inset 0 0 0 2px #a04040; text-align: center; text-shadow: 2px 2px 0 #000; }
 .center-msg span { padding: 8px 18px; background: rgba(0, 0, 0, 0.6); text-shadow: 2px 2px 0 #000; font-size: 28px; }
 
 @media (max-width: 760px) {

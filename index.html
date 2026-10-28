@@ -185,6 +185,26 @@
 
     <noscript><p class="center-msg">Blockcraft needs JavaScript.</p></noscript>
   </div>
+  <div id="boot-error" class="center-msg boot-error" hidden><p></p></div>
+  <script>
+    // If the game can't start (scripts blocked, no WebGL, an error), say so instead of
+    // leaving a dark screen.
+    window.showBootError = function (text) {
+      var box = document.getElementById('boot-error');
+      box.querySelector('p').textContent = text;
+      box.hidden = false;
+    };
+    window.addEventListener('error', function (e) {
+      // Only scripts and script errors; a missing font stylesheet is harmless.
+      if (e.target && e.target.tagName && e.target.tagName !== 'SCRIPT') return;
+      if (!window.game) window.showBootError('The game failed to load: ' + (e.message || 'a script could not be loaded') + '. Try reloading the page.');
+    }, true);
+    setTimeout(function () {
+      if (!window.game && document.getElementById('boot-error').hidden) {
+        window.showBootError('The game is taking too long to load. If you are on a school or work network, it may be blocking the game files. Try reloading, or another network.');
+      }
+    }, 15000);
+  </script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

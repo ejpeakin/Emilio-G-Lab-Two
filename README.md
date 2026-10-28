@@ -5,8 +5,9 @@ A Minecraft-style voxel sandbox that runs in the browser, including the content 
 mushrooms, abandoned camps, explorer maps, straw beds, cushions, and 16-color wool and
 concrete with slabs and stairs.
 
-Plain JavaScript modules and [three.js](https://threejs.org) (r160, from a CDN). No build
-step and no asset files: every texture, icon, model and sound is generated in code.
+Plain JavaScript modules and [three.js](https://threejs.org) (r160, bundled in
+`src/lib` so no CDN is needed). No build step and no asset files: every texture, icon,
+model and sound is generated in code.
 It is a fan project and isn't affiliated with Mojang or Microsoft.
 
 ## Running it
@@ -18,8 +19,10 @@ npm start        # then open http://localhost:8080
 # or: PORT=3000 npm start
 # or any static server, e.g. python3 -m http.server 8080
 ```
- You need an
-internet connection for three.js and the Google Fonts, and a keyboard and mouse.
+
+The pixel fonts come
+from Google Fonts (it falls back to a monospace font offline). You need a keyboard and
+mouse, and a browser with WebGL 2.
 
 ## Controls
 

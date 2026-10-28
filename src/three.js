@@ -1,2 +1,3 @@
-// Single import point for three.js so the pinned CDN version lives in one place.
-export * from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+// Single import point for three.js. A copy of r160 ships with the game (src/lib) so it
+// still loads on networks that block public CDNs.
+export * from './lib/three.module.min.js';
